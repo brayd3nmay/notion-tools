@@ -1,10 +1,18 @@
-import { describe, it, expect, vi } from "vitest";
-import { queryUnprocessedPages, type NotionPage } from "../src/notion";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  queryUnprocessedPages,
+  uploadAndAttachScreenshot,
+  type NotionPage,
+} from "../src/notion";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
 describe("queryUnprocessedPages", () => {
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
+
   it("returns pages with URL set and Description empty", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -50,5 +58,49 @@ describe("queryUnprocessedPages", () => {
         ),
       })
     );
+  });
+});
+
+describe("uploadAndAttachScreenshot", () => {
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
+
+  it("creates file upload, sends content, and updates page", async () => {
+    // Step 1: create file upload
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: "file-upload-123",
+        upload_url: "https://api.notion.com/v1/file_uploads/file-upload-123/send",
+      }),
+    });
+    // Step 2: send file content
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: "uploaded" }),
+    });
+    // Step 3: update page
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ id: "page-1" }),
+    });
+
+    const screenshot = new Uint8Array([0x89, 0x50, 0x4e, 0x47]); // fake PNG header
+    await uploadAndAttachScreenshot("page-1", screenshot, "fake-token");
+
+    // Verify 3 fetch calls were made
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+
+    // Verify file upload creation
+    expect(mockFetch.mock.calls[0][0]).toBe("https://api.notion.com/v1/file_uploads");
+
+    // Verify file content send
+    expect(mockFetch.mock.calls[1][0]).toBe(
+      "https://api.notion.com/v1/file_uploads/file-upload-123/send"
+    );
+
+    // Verify page update
+    expect(mockFetch.mock.calls[2][0]).toBe("https://api.notion.com/v1/pages/page-1");
   });
 });
