@@ -17,6 +17,6 @@ NOTION_DATABASE_ID = "30a6302d-6df1-4752-87cd-34eee3db74c2"
 
 [[kv_namespaces]]
 binding = "RETRY_STORE"
-id = "PLACEHOLDER_KV_ID"
+id = "98708f7053924ac2b6ec67fd4615d22c"
 
 # Secret: NOTION_API_KEY — set via `wrangler secret put NOTION_API_KEY`
