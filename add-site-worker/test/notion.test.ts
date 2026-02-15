@@ -13,7 +13,7 @@ describe("queryUnprocessedPages", () => {
     mockFetch.mockReset();
   });
 
-  it("returns pages with URL set and Description empty", async () => {
+  it("returns pages with URL set and Preview empty", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -21,9 +21,9 @@ describe("queryUnprocessedPages", () => {
           {
             id: "page-1",
             properties: {
-              Name: { title: [{ plain_text: "" }] },
+              Name: { title: [{ plain_text: "My Site" }] },
               URL: { url: "https://example.com" },
-              Description: { rich_text: [] },
+              Description: { rich_text: [{ plain_text: "Existing description" }] },
             },
           },
         ],
@@ -36,6 +36,7 @@ describe("queryUnprocessedPages", () => {
     expect(pages).toHaveLength(1);
     expect(pages[0].id).toBe("page-1");
     expect(pages[0].url).toBe("https://example.com");
+    expect(pages[0].description).toBe("Existing description");
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://api.notion.com/v1/databases/fake-db-id/query",
@@ -51,7 +52,7 @@ describe("queryUnprocessedPages", () => {
             filter: {
               and: [
                 { property: "URL", url: { is_not_empty: true } },
-                { property: "Description", rich_text: { is_empty: true } },
+                { property: "Preview", files: { is_empty: true } },
               ],
             },
           })

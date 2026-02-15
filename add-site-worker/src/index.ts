@@ -11,14 +11,30 @@ export interface Env {
   NOTION_DATABASE_ID: string;
 }
 
+// Browser Rendering limit: 3 new instances per minute.
+// 25s delay between pages keeps us safely under the cap.
+const DELAY_BETWEEN_PAGES_MS = 25_000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function processNewSites(env: Env): Promise<void> {
   const pages = await queryUnprocessedPages(env.NOTION_DATABASE_ID, env.NOTION_API_KEY);
   console.log(`Found ${pages.length} unprocessed page(s)`);
 
-  for (const page of pages) {
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+
     if (!(await shouldProcess(env.RETRY_STORE, page.id))) {
       console.log(`Skipping ${page.url} — max retries reached`);
       continue;
+    }
+
+    // Rate limit: wait between browser sessions (skip delay for first page)
+    if (i > 0) {
+      console.log(`Waiting ${DELAY_BETWEEN_PAGES_MS / 1000}s (rate limit)...`);
+      await delay(DELAY_BETWEEN_PAGES_MS);
     }
 
     try {
@@ -29,14 +45,15 @@ async function processNewSites(env: Env): Promise<void> {
         page.url
       );
 
-      const description = await generateDescription(
+      // Only generate AI description if one doesn't already exist
+      const description = page.description || await generateDescription(
         env.AI,
         title,
         metaDescription,
         page.url
       );
 
-      const name = title || new URL(page.url).hostname;
+      const name = page.name || title || new URL(page.url).hostname;
 
       await uploadAndAttachScreenshot(page.id, screenshot, env.NOTION_API_KEY);
       await updatePageDetails(page.id, name, description, env.NOTION_API_KEY);

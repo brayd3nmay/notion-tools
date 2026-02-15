@@ -2,6 +2,7 @@ export interface NotionPage {
   id: string;
   url: string;
   name: string;
+  description: string;
 }
 
 export async function queryUnprocessedPages(
@@ -21,7 +22,7 @@ export async function queryUnprocessedPages(
         filter: {
           and: [
             { property: "URL", url: { is_not_empty: true } },
-            { property: "Description", rich_text: { is_empty: true } },
+            { property: "Preview", files: { is_empty: true } },
           ],
         },
       }),
@@ -38,6 +39,7 @@ export async function queryUnprocessedPages(
       properties: {
         Name: { title: Array<{ plain_text: string }> };
         URL: { url: string };
+        Description: { rich_text: Array<{ plain_text: string }> };
       };
     }>;
   };
@@ -46,6 +48,7 @@ export async function queryUnprocessedPages(
     id: page.id,
     url: page.properties.URL.url,
     name: page.properties.Name.title[0]?.plain_text ?? "",
+    description: page.properties.Description.rich_text[0]?.plain_text ?? "",
   }));
 }
 
