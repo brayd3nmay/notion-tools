@@ -3,6 +3,7 @@ export interface NotionPage {
   url: string;
   name: string;
   description: string;
+  hasPreview: boolean;
 }
 
 export async function queryUnprocessedPages(
@@ -20,10 +21,8 @@ export async function queryUnprocessedPages(
       },
       body: JSON.stringify({
         filter: {
-          and: [
-            { property: "URL", url: { is_not_empty: true } },
-            { property: "Preview", files: { is_empty: true } },
-          ],
+          property: "URL",
+          url: { is_not_empty: true },
         },
       }),
     }
@@ -40,6 +39,7 @@ export async function queryUnprocessedPages(
         Name: { title: Array<{ plain_text: string }> };
         URL: { url: string };
         Description: { rich_text: Array<{ plain_text: string }> };
+        Preview: { files: Array<unknown> };
       };
     }>;
   };
@@ -49,6 +49,7 @@ export async function queryUnprocessedPages(
     url: page.properties.URL.url,
     name: page.properties.Name.title[0]?.plain_text ?? "",
     description: page.properties.Description.rich_text[0]?.plain_text ?? "",
+    hasPreview: page.properties.Preview.files.length > 0,
   }));
 }
 

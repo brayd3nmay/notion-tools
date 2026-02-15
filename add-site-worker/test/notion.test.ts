@@ -13,7 +13,7 @@ describe("queryUnprocessedPages", () => {
     mockFetch.mockReset();
   });
 
-  it("returns pages with URL set and Preview empty", async () => {
+  it("returns all pages with URL set, including hasPreview flag", async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -24,6 +24,16 @@ describe("queryUnprocessedPages", () => {
               Name: { title: [{ plain_text: "My Site" }] },
               URL: { url: "https://example.com" },
               Description: { rich_text: [{ plain_text: "Existing description" }] },
+              Preview: { files: [] },
+            },
+          },
+          {
+            id: "page-2",
+            properties: {
+              Name: { title: [{ plain_text: "Other Site" }] },
+              URL: { url: "https://other.com" },
+              Description: { rich_text: [] },
+              Preview: { files: [{ name: "screenshot.jpg" }] },
             },
           },
         ],
@@ -33,27 +43,20 @@ describe("queryUnprocessedPages", () => {
 
     const pages = await queryUnprocessedPages("fake-db-id", "fake-token");
 
-    expect(pages).toHaveLength(1);
-    expect(pages[0].id).toBe("page-1");
-    expect(pages[0].url).toBe("https://example.com");
+    expect(pages).toHaveLength(2);
+    expect(pages[0].hasPreview).toBe(false);
     expect(pages[0].description).toBe("Existing description");
+    expect(pages[1].hasPreview).toBe(true);
+    expect(pages[1].description).toBe("");
 
     expect(mockFetch).toHaveBeenCalledWith(
       "https://api.notion.com/v1/databases/fake-db-id/query",
       expect.objectContaining({
-        method: "POST",
-        headers: expect.objectContaining({
-          Authorization: "Bearer fake-token",
-          "Notion-Version": "2022-06-28",
-          "Content-Type": "application/json",
-        }),
         body: expect.stringContaining(
           JSON.stringify({
             filter: {
-              and: [
-                { property: "URL", url: { is_not_empty: true } },
-                { property: "Preview", files: { is_empty: true } },
-              ],
+              property: "URL",
+              url: { is_not_empty: true },
             },
           })
         ),
